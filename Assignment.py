@@ -26,6 +26,10 @@ def update_right_eye_points(index):
             points_right_eye[4] = Point(lm.x, lm.y)
         case 144:
             points_right_eye[5] = Point(lm.x, lm.y)
+        case 145:
+            points_right_eye[6] = Point(lm.x, lm.y)
+        case 159:
+            points_right_eye[7] = Point(lm.x, lm.y)
             
 def update_left_eye_points(index):
     match index:
@@ -41,6 +45,10 @@ def update_left_eye_points(index):
             points_left_eye[4] = Point(lm.x, lm.y)
         case 380:
             points_left_eye[5] = Point(lm.x, lm.y)
+        case 374:
+            points_left_eye[6] = Point(lm.x, lm.y)
+        case 386:
+            points_left_eye[7] = Point(lm.x, lm.y)
     
 def normalization(current_value, side):
     if side == 'left':
@@ -97,7 +105,6 @@ def calculate_PERCLOS_80(t):
     P80 = (t[2] - t[1]) / (t[3] - t[0]) if t[3] != t[0] else 0
     return P80
 
-# Timer che registra la chiusura dell'occhio per 10 secondi
 def EAR_calibration():
     # Metto tutti i valori dell'EAR in due liste, una per occhio, e poi calcolo il massimo e il minimo
     # Calculate the closure of the right eye
@@ -160,9 +167,16 @@ blink_phase = 1
 while cap.isOpened():
     
     
-    points_left_eye = [None] * 7
-    points_right_eye = [None] * 7
+    points_left_eye = [None] * 8
+    points_right_eye = [None] * 8
     totalTime = 0
+    # Face orientation
+    face_2d = []
+    face_3d = []
+    right_eye_2d = []
+    right_eye_3d = []
+    left_eye_2d = []
+    left_eye_3d = []
     
     success, image = cap.read()
 
@@ -202,11 +216,43 @@ while cap.isOpened():
                 #     cv2.putText(image, "(263)", (int(lm.x * img_w), int(lm.y * img_h)), cv2.FONT_HERSHEY_SIMPLEX, 2, (0, 0, 0), 2)
                 
                 if idx in LEFT_EYE:
-                    cv2.circle(image, (int(lm.x * img_w), int(lm.y * img_h)), radius=1, color=(0, 0, 255), thickness=-1)
+                    cv2.circle(image, (int(lm.x * img_w), int(lm.y * img_h)), radius=1, color=(255, 0, 0), thickness=-1)
 
                 # Saving new points position in the lists
                 update_left_eye_points(idx)
                 update_right_eye_points(idx)
+                
+                # GET FACE ORIENTATION
+                if idx == 33 or idx == 263 or idx == 1 or idx == 61 or idx == 291 or idx == 199:
+                    if idx == 1:
+                        nose_2d = (lm.x * img_w, lm.y * img_h)
+                        nose_3d = (lm.x * img_w, lm.y * img_h, lm.z * 3000)
+                    x, y = int(lm.x * img_w), int(lm.y * img_h)
+                    # Gte the 2D coordinates
+                    face_2d.append([x, y])
+                    # Get the 3D coordinates
+                    face_3d.append([x, y, lm.z])
+                # RIGHT EYE POSITION
+                if idx == 468 or idx == 33 or idx == 145 or idx == 133 or idx == 159:
+                    if idx == 468:
+                        right_pupil_2d = (lm.x * img_w, lm.y * img_h)
+                        right_pupil_3d = (lm.x * img_w, lm.y * img_h, lm.z * 3000)
+                    x, y = int(lm.x * img_w), int(lm.y * img_h)
+                    # Gte the 2D coordinates
+                    right_eye_2d.append([x, y])
+                    # Get the 3D coordinates
+                    right_eye_3d.append([x, y, lm.z])
+                # LEFT EYE POSITION
+                if idx == 473 or idx == 362 or idx == 374 or idx == 263 or idx == 386:
+                    if idx == 473:
+                        left_pupil_2d = (lm.x * img_w, lm.y * img_h)
+                        left_pupil_3d = (lm.x * img_w, lm.y * img_h, lm.z * 3000)
+                    x, y = int(lm.x * img_w), int(lm.y * img_h)
+                    # Gte the 2D coordinates
+                    left_eye_2d.append([x, y])
+                    # Get the 3D coordinates
+                    left_eye_3d.append([x, y, lm.z])
+                    
     
         # CALIBRATION
         if not calibration_done:
@@ -221,7 +267,6 @@ while cap.isOpened():
             # Calculate the closure of the left eye
             result_left = calculate_EAR(points_left_eye)
             ear_left = normalization(result_left, 'left')
-            print('EAR LEFT: ', ear_left)
             
             # Calculate the closure of the right eye
             result_right = calculate_EAR(points_right_eye)
@@ -314,15 +359,81 @@ while cap.isOpened():
                 end = time.time()
                 totalTime = end - start_timer
                 if (totalTime >= 3):
-                    cv2.putText(image, 'DROWSY DRIVER', (50, 200), cv2.FONT_HERSHEY_SIMPLEX, 2, (0, 0, 255), 1)
+                    cv2.putText(image, 'DROWSY DRIVER', (50, 200), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 1)
             else:
                 # print('UNDER')
                 # Se ho gli occhi aperti azzero il contatore di frame con occhi chiusi
                 start_closure_timer = True
                 start_timer = 0
-
+            
+            # ------------------------------------------------------------
+            # Eyes and Head gaze positions
+            # ------------------------------------------------------------
+            # FACE ORIENTATION
+            # Convert into numpy arrays
+            face_2d = np.array(face_2d, dtype=np.float64)
+            face_3d = np.array(face_3d, dtype=np.float64)
+            left_eye_2d = np.array(left_eye_2d, dtype=np.float64)
+            left_eye_3d = np.array(left_eye_3d, dtype=np.float64)
+            right_eye_2d = np.array(right_eye_2d, dtype=np.float64)
+            right_eye_3d = np.array(right_eye_3d, dtype=np.float64)
+            
+            # Define the camera matrix
+            focal_length = 1*img_w
+            cam_matrix = np.array([ [focal_length, 0, img_h/2],
+                                      [0, focal_length, img_w/2],
+                                      [0, 0, 1] ])
+            # The distortion parameters
+            dist_matrix = np.zeros((4, 1), dtype=np.float64)
+            
+            # Solve PnP
+            success, rot_vec, trans_vec = cv2.solvePnP(face_3d, face_2d, cam_matrix, dist_matrix)
+            success_left_eye, rot_vec_left_eye, trans_vec_left_eye = cv2.solvePnP(left_eye_3d, left_eye_2d, cam_matrix, dist_matrix)
+            success_right_eye, rot_vec_right_eye, trans_vec_right_eye = cv2.solvePnP(right_eye_3d, right_eye_2d, cam_matrix, dist_matrix)
+            
+            # Get rotational matrix
+            rmat, jac = cv2.Rodrigues(rot_vec)
+            rmat_left_eye, jac_left_eye = cv2.Rodrigues(rot_vec_left_eye)
+            rmat_right_eye, jac_right_eye = cv2.Rodrigues(rot_vec_right_eye)
+            
+            # Get euler angles
+            angles, mtxR, mtxQ, Qx, Qy, Qz = cv2.RQDecomp3x3(rmat)
+            angles_left_eye, mtxR_left_eye, mtxQ_left_eye, Qx_left_eye, Qy_left_eye, Qz_left_eye = cv2.RQDecomp3x3(rmat_left_eye)
+            angles_right_eye, mtxR_right_eye, mtxQ_right_eye, Qx_right_eye, Qy_right_eye, Qz_right_eye = cv2.RQDecomp3x3(rmat_right_eye)
+            
+            pitch = angles[0] * 1800
+            yaw = -angles[1] * 1800
+            roll = 180 + (np.arctan2(points_right_eye[0].y - points_left_eye[3].y, points_right_eye[0].x - points_left_eye[3].x) * 180/np.pi)
+            if roll > 180:
+                roll = roll - 360
+                
+            pitch_left_eye = angles_left_eye[0] * 1800
+            yaw_left_eye = angles_left_eye[1] * 1800
+            pitch_right_eye = angles_right_eye[0] * 1800
+            yaw_right_eye = angles_right_eye[1] * 1800
+            
+            # Check if the driver is distracted
+            if -30 > yaw > 30 or -30 > yaw_left_eye > 30 or -30 > yaw_right_eye > 30:
+                cv2.putText(image, 'DISTRACTED DRIVER', (50, 300), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 1)
+                
+            # Display directions nose
+            nose_3d_projection, jacobian = cv2.projectPoints(nose_3d, rot_vec, trans_vec, cam_matrix, dist_matrix)
+            p1 = (int(nose_2d[0]), int(nose_2d[1]))
+            p2 = (int(nose_2d[0] - yaw * 10), int(nose_2d[1] - pitch * 10))
+            cv2.line(image, p1, p2, (255, 0, 0), 3)
+            # Display directions left eye
+            l_eye_projection, l_eye_jacobian = cv2.projectPoints(left_eye_3d, rot_vec_left_eye, trans_vec, cam_matrix, dist_matrix)
+            p1_left_eye = (int(left_pupil_2d[0]), int(left_pupil_2d[1]))
+            p2_left_eye = (int(left_pupil_2d[0] + yaw_left_eye * 1.25), int(left_pupil_2d[1] - pitch_left_eye * 1.25))
+            cv2.line(image, p1_left_eye, p2_left_eye, (0, 255, 0), 3)
+            # Display directions right eye
+            r_eye_projection, r_eye_jacobian = cv2.projectPoints(right_eye_3d, rot_vec_right_eye, trans_vec, cam_matrix, dist_matrix)
+            p1_right_eye = (int(right_pupil_2d[0]), int(right_pupil_2d[1]))
+            p2_right_eye = (int(right_pupil_2d[0] + yaw_right_eye * 1.25), int(right_pupil_2d[1] - pitch_right_eye * 1.25))
+            cv2.line(image, p1_right_eye, p2_right_eye, (0, 255, 0), 3)
+            
         cv2.imshow('output window', image)       
 
     if cv2.waitKey(5) & 0xFF == 27:
         break
-cap.release()
+cap.release() 
