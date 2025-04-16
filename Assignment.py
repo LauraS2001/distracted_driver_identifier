@@ -215,8 +215,8 @@ while cap.isOpened():
                 # if idx == 263:
                 #     cv2.putText(image, "(263)", (int(lm.x * img_w), int(lm.y * img_h)), cv2.FONT_HERSHEY_SIMPLEX, 2, (0, 0, 0), 2)
                 
-                if idx in LEFT_EYE:
-                    cv2.circle(image, (int(lm.x * img_w), int(lm.y * img_h)), radius=1, color=(255, 0, 0), thickness=-1)
+                # if idx in LEFT_EYE:
+                #     cv2.circle(image, (int(lm.x * img_w), int(lm.y * img_h)), radius=1, color=(255, 0, 0), thickness=-1)
 
                 # Saving new points position in the lists
                 update_left_eye_points(idx)
@@ -358,7 +358,7 @@ while cap.isOpened():
                     start_timer = time.time()
                 end = time.time()
                 totalTime = end - start_timer
-                if (totalTime >= 3):
+                if (totalTime > 10):
                     cv2.putText(image, 'DROWSY DRIVER', (50, 200), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 1)
             else:
                 # print('UNDER')
@@ -412,8 +412,9 @@ while cap.isOpened():
             pitch_right_eye = angles_right_eye[0] * 1800
             yaw_right_eye = angles_right_eye[1] * 1800
             
+            # print('ROTATION: ', yaw, yaw_left_eye, yaw_right_eye)
             # Check if the driver is distracted
-            if -30 > yaw > 30 or -30 > yaw_left_eye > 30 or -30 > yaw_right_eye > 30:
+            if np.abs(yaw) > 30 and np.abs(yaw_left_eye) > 30 and np.abs(yaw_right_eye) > 30:
                 cv2.putText(image, 'DISTRACTED DRIVER', (50, 300), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 1)
                 
             # Display directions nose
